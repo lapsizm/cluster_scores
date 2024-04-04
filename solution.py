@@ -13,7 +13,6 @@ def silhouette_score(x, labels):
     sil_scores = np.zeros(n)
 
     for i in range(n):
-        # Calculate average distance to points in the same cluster (a_i)
         cluster_label = labels[i]
         cluster_indices = np.where(labels == cluster_label)[0]
         if len(cluster_indices) == 1:
@@ -29,16 +28,27 @@ def silhouette_score(x, labels):
         a_distances = sklearn.metrics.pairwise_distances([x[i]], x[cluster_indices])
         a_i = np.mean(a_distances)
 
-        # TODO: b - рассчитываем расстояние до одного кластера, считаем среднее, добавляем в массив, рассчитываем расстояние до другого кластера, считаем среднее, добавляем в массив, ...., находим минимум в массиве
-        b_distances = sklearn.metrics.pairwise_distances([x[i]], x[cluster_not_indices])
-        b_i = np.min(b_distances)
+        # TODO: убрать цикл?
+        b_distances = dict()
+        for el in cluster_not_indices:
+            temp_dist = sklearn.metrics.pairwise_distances([x[i]], [x[el]])
+            if labels[el] not in b_distances.keys():
+                b_distances[labels[el]] = [temp_dist]
+            else:
+                b_distances[labels[el]].append(temp_dist)
+
+        for k,v in b_distances.items():
+            avg = np.mean(v)
+            b_distances[k] = avg
+
+
+        b_i = min(b_distances.values())
 
         if a_i == b_i:
             sil_scores[i] = 0
         else:
             sil_scores[i] = (b_i - a_i) / max(a_i, b_i)
 
-    # Compute mean silhouette score
     sil_score = np.mean(sil_scores)
 
     return sil_score
