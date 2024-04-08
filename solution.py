@@ -23,7 +23,7 @@ def silhouette_score(x, labels):
             sil_scores[i] = 0
             continue
         temp_index = np.where(cluster_indices == i)
-        cluster_indices = np.delete(cluster_indices, temp_index)        # удаляем i
+        cluster_indices = np.delete(cluster_indices, temp_index)  # удаляем i
 
         a_distances = sklearn.metrics.pairwise_distances([x[i]], x[cluster_indices])
         a_i = np.mean(a_distances)
@@ -37,10 +37,9 @@ def silhouette_score(x, labels):
             else:
                 b_distances[labels[el]].append(temp_dist)
 
-        for k,v in b_distances.items():
+        for k, v in b_distances.items():
             avg = np.mean(v)
             b_distances[k] = avg
-
 
         b_i = min(b_distances.values())
 
@@ -53,72 +52,57 @@ def silhouette_score(x, labels):
 
     return sil_score
 
-# [0,0,0]
-# a = 4 / 2 = 2
-# b = 3 / 2 = 1.5
-# 1.5 - 2 / 2 = -1/4
 
-# [3,0,0]
-# 1 кластер
-# 0
-
-# [0,0,4]
-# a = 4
-# b = 5
-# 1 / 5
-
-# Пример использования функции
 from sklearn.metrics import silhouette_score as hello
 
-x = [[0, 4, 0],[1, 4, 0], [3, 0, 1], [0, 0, 4], [1,0,2], [3, 0, 4]]
-labels = [10, 64, 64, 10, 13, 13]
-
-silhouette = silhouette_score(np.array(x), np.array(labels))
-print(silhouette == hello(x,labels))
-print(silhouette)
-print(hello(x,labels))
-
-x = [[0, 0, 0], [3, 0, 0], [0, 0, 4]]
-labels = [10, 20, 10]
-
-silhouette = silhouette_score(np.array(x), np.array(labels))
-print(silhouette == hello(x,labels))
-
-x = [[2, 0, 0], [3, 0, 0], [0, 0, 4], [1,0,2], [3, 0, 4]]
-labels = [10, 20, 10, 30, 10]
-
-silhouette = silhouette_score(np.array(x), np.array(labels))
-print(silhouette == hello(x,labels))
-print(silhouette)
-print(hello(x,labels))
-
-x = [[0, 4, 0], [3, 0, 1], [0, 0, 4], [1,0,2], [3, 0, 4]]
-labels = [10, 66, 10, 30, 66]
-
-silhouette = silhouette_score(np.array(x), np.array(labels))
-print(silhouette == hello(x,labels))
-print(silhouette)
-print(hello(x,labels))
+# x = [[0, 4, 0], [1, 4, 0], [3, 0, 1], [0, 0, 4], [1, 0, 2], [3, 0, 4]]
+# labels = [10, 64, 64, 10, 13, 13]
+#
+# silhouette = silhouette_score(np.array(x), np.array(labels))
+# print(silhouette == hello(x, labels))
+# print(silhouette)
+# print(hello(x, labels))
+#
+# x = [[0, 0, 0], [3, 0, 0], [0, 0, 4]]
+# labels = [10, 20, 10]
+#
+# silhouette = silhouette_score(np.array(x), np.array(labels))
+# print(silhouette == hello(x, labels))
+#
+# x = [[2, 0, 0], [3, 0, 0], [0, 0, 4], [1, 0, 2], [3, 0, 4]]
+# labels = [10, 20, 10, 30, 10]
+#
+# silhouette = silhouette_score(np.array(x), np.array(labels))
+# print(silhouette == hello(x, labels))
+# print(silhouette)
+# print(hello(x, labels))
+#
+# x = [[0, 4, 0], [3, 0, 1], [0, 0, 4], [1, 0, 2], [3, 0, 4]]
+# labels = [10, 66, 10, 30, 66]
+#
+# silhouette = silhouette_score(np.array(x), np.array(labels))
+# print(silhouette == hello(x, labels))
+# print(silhouette)
+# print(hello(x, labels))
 
 
 def bcubed_score(true_labels, predicted_labels):
-    # Проверяем, что входные массивы не пустые и имеют одинаковую длину
-    assert len(true_labels) > 0 and len(predicted_labels) > 0 and len(true_labels) == len(
-        predicted_labels), "Пустые массивы или разная длина"
+    '''
+    :param np.ndarray true_labels: Непустой одномерный массив меток объектов
+    :param np.ndarray predicted_labels: Непустой одномерный массив меток объектов
+    :return float: B-Cubed для объектов с истинными метками true_labels и предсказанными метками predicted_labels
+    '''
+    true_same = true_labels[:, np.newaxis] == true_labels
+    pred_same = predicted_labels[:, np.newaxis] == predicted_labels
+    intersections = true_same * pred_same
 
-    # Количество объектов
-    n = len(true_labels)
+    true_count = np.sum(true_same, axis=1)
+    pred_count = np.sum(pred_same, axis=1)
+    intersections_count = np.sum(intersections, axis=1)
 
-    # Вычисляем матрицу совпадений меток между true_labels и predicted_labels
-    label_matches = (true_labels[:, None] == predicted_labels[None, :]).astype(float)
+    precision_sc = np.mean(intersections_count / pred_count)
+    recall_sc = np.mean(intersections_count / true_count)
 
-    # Вычисляем суммы для точности и полноты без использования циклов
-    precision_sum = np.sum(label_matches, axis=1) / np.where(np.sum(label_matches, axis=0) != 0,
-                                                             np.sum(label_matches, axis=0), 1)
-    recall_sum = np.sum(label_matches, axis=1) / np.where(np.sum(label_matches, axis=1) != 0,
-                                                          np.sum(label_matches, axis=1), 1)
-
-    # Вычисляем B-Cubed score
-    score = np.nanmean((precision_sum + recall_sum) / 2)
+    score = 2 * (precision_sc * recall_sc) / (precision_sc + recall_sc)
 
     return score
