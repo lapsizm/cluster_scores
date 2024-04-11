@@ -5,85 +5,43 @@ import sklearn.metrics
 
 
 def silhouette_score(x, labels):
-    n = len(x)
-    clusters = np.unique(labels)
-    if len(clusters) == 1:
+    clust_counts = np.unique(labels, return_counts=True)[1]
+    if len(clust_counts) == 1:
         return 0
 
-    sil_scores = np.zeros(n)
+    x = x[np.argsort(labels)]
 
-    for i in range(n):
-        cluster_label = labels[i]
-        cluster_indices = np.where(labels == cluster_label)[0]
-        if len(cluster_indices) == 1:
-            sil_scores[i] = 0
-            continue
-        cluster_not_indices = np.where(labels != cluster_label)[0]
-        if len(cluster_not_indices) == 0:
-            sil_scores[i] = 0
-            continue
-        temp_index = np.where(cluster_indices == i)
-        cluster_indices = np.delete(cluster_indices, temp_index)  # удаляем i
+    distances = sklearn.metrics.pairwise.pairwise_distances(x, metric='euclidean', n_jobs=-1)
 
-        a_distances = sklearn.metrics.pairwise_distances([x[i]], x[cluster_indices])
-        a_i = np.mean(a_distances)
+    first = 0
+    correct = []
+    pair_dists = np.zeros((len(labels), len(clust_counts)))
 
-        # TODO: убрать цикл?
-        b_distances = dict()
-        for el in cluster_not_indices:
-            temp_dist = sklearn.metrics.pairwise_distances([x[i]], [x[el]])
-            if labels[el] not in b_distances.keys():
-                b_distances[labels[el]] = [temp_dist]
-            else:
-                b_distances[labels[el]].append(temp_dist)
+    for i, count in zip(range(len(clust_counts)), clust_counts):
+        last = first + count
+        dist_i = distances[:, first:last]
+        pair_dists[:, i] = np.sum(dist_i, axis=1)
+        first += count
+        correct += [i] * count
 
-        for k, v in b_distances.items():
-            avg = np.mean(v)
-            b_distances[k] = avg
+    first = np.arange(len(pair_dists))
+    last = correct
 
-        b_i = min(b_distances.values())
+    s = pair_dists[first, last]
+    divisor = clust_counts[correct] - 1
+    s = np.divide(s, divisor, where=(divisor != 0), out=np.zeros_like(labels, dtype=float))
 
-        if a_i == b_i:
-            sil_scores[i] = 0
-        else:
-            sil_scores[i] = (b_i - a_i) / max(a_i, b_i)
+    pair_dists[first, last] = np.inf
 
-    sil_score = np.mean(sil_scores)
+    min_i = np.argmin(pair_dists, axis=1)
+    first = np.arange(pair_dists.shape[0])
+    d = pair_dists[first, min_i] / clust_counts[min_i]
 
+    max_d = np.maximum(d, s)
+    sil_score = np.divide(d - s, max_d, where=max_d != 0, out=np.zeros_like(labels, dtype=float))
+    sil_score[clust_counts[correct] == 1] = 0
+    sil_score = sil_score.mean()
     return sil_score
-
-
-from sklearn.metrics import silhouette_score as hello
-
-# x = [[0, 4, 0], [1, 4, 0], [3, 0, 1], [0, 0, 4], [1, 0, 2], [3, 0, 4]]
-# labels = [10, 64, 64, 10, 13, 13]
-#
-# silhouette = silhouette_score(np.array(x), np.array(labels))
-# print(silhouette == hello(x, labels))
-# print(silhouette)
-# print(hello(x, labels))
-#
-# x = [[0, 0, 0], [3, 0, 0], [0, 0, 4]]
-# labels = [10, 20, 10]
-#
-# silhouette = silhouette_score(np.array(x), np.array(labels))
-# print(silhouette == hello(x, labels))
-#
-# x = [[2, 0, 0], [3, 0, 0], [0, 0, 4], [1, 0, 2], [3, 0, 4]]
-# labels = [10, 20, 10, 30, 10]
-#
-# silhouette = silhouette_score(np.array(x), np.array(labels))
-# print(silhouette == hello(x, labels))
-# print(silhouette)
-# print(hello(x, labels))
-#
-# x = [[0, 4, 0], [3, 0, 1], [0, 0, 4], [1, 0, 2], [3, 0, 4]]
-# labels = [10, 66, 10, 30, 66]
-#
-# silhouette = silhouette_score(np.array(x), np.array(labels))
-# print(silhouette == hello(x, labels))
-# print(silhouette)
-# print(hello(x, labels))
 
 
 def bcubed_score(true_labels, predicted_labels):
